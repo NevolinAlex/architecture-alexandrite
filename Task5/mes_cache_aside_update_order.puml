@@ -1,0 +1,17 @@
+@startuml
+title Обновление статуса заказов с применением паттерна Cache-Aside и инвалидацией по изменению
+actor Оператор
+participant "MES" as mes
+participant "mes-api" as mes_api
+database "redis" as redis
+database "mes-db" as mes_db
+
+Оператор -> mes: Берет заказ в работу
+mes -> mes_api: PUT /orders/{id} - обновление заказа
+
+mes_api -> mes_db: update ... set status=MANUFACTURING_STARTED where id={id}
+mes_api -> redis: Получить все ключи по префиксу: orders:*
+mes_api -> redis: Удалить все ключи: DEL {keys}
+mes_api -> mes: Вернуть ответ об успешном статусе обновления заказа
+mes -> Оператор: Заказа успешно взят в работу
+@enduml
