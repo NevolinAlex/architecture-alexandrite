@@ -1,0 +1,20 @@
+@startuml
+title Чтение списка заказов с применением паттерна Cache-Aside
+actor Оператор
+participant "MES" as mes
+participant "mes-api" as mes_api
+database "redis" as redis
+database "mes-db" as mes_db
+
+Оператор -> mes: Открывает главную страницу
+mes -> mes_api: GET /orders?page=1&status=MANUFACTURING_APPROVED
+mes_api -> redis: GET orders:status:MANUFACTURING_APPROVED:page:1
+alt Попадание в кэш
+    mes_api -> mes: Возвращает ответ на запрос из кэша
+else Не попадание в кэш
+    mes_api -> mes_db: select ... from .. where status=MANUFACTURING_APPROVED and ... limit 10 offset 0
+    mes_api -> redis: SET orders:status:MANUFACTURING_APPROVED:page:1 {response} [TTL=600]
+    mes_api -> mes: Возвращает ответ на запрос из БД
+end alt
+mes -> Оператор: Отображает страницу с заказами
+@enduml
